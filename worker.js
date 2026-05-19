@@ -89,16 +89,21 @@ async function handleGetHistory(request, env) {
   }
 
   if (!env.DB) {
-    return json({ ok: false, error: "history db not configured" }, 500);
+    return json({ ok: false, error: "history db not configured", items: [] }, 200);
   }
 
-  const limit = Math.min(Number(new URL(request.url).searchParams.get("limit") || 48), 500);
-  const stmt = env.DB.prepare(
-    "SELECT ts, cpu_percent, memory_percent, disk_percent, docker_running FROM status_history ORDER BY ts DESC LIMIT ?"
-  ).bind(limit);
-  const result = await stmt.all();
-  const rows = (result.results || []).reverse();
-  return json({ ok: true, items: rows });
+  try {
+    await ensureHistoryTable(env);
+    const limit = Math.min(Number(new URL(request.url).searchParams.get("limit") || 48), 500);
+    const stmt = env.DB.prepare(
+      "SELECT ts, cpu_percent, memory_percent, disk_percent, docker_running FROM status_history ORDER BY ts DESC LIMIT ?"
+    ).bind(limit);
+    const result = await stmt.all();
+    const rows = (result.results || []).reverse();
+    return json({ ok: true, items: rows });
+  } catch (err) {
+    return json({ ok: false, error: `history unavailable: ${err.message || String(err)}`, items: [] }, 200);
+  }
 }
 
 function handlePage(request, env) {
@@ -279,12 +284,16 @@ function handlePage(request, env) {
 
     async function load() {
       try {
-        const [statusRes, historyRes] = await Promise.all([
-          fetch('/api/status', { cache: 'no-store' }),
-          fetch('/api/history?limit=48', { cache: 'no-store' }),
-        ]);
+        const statusRes = await fetch('/api/status', { cache: 'no-store' });
         const data = await statusRes.json();
-        const history = await historyRes.json();
+        let history = { ok: false, items: [] };
+
+        try {
+          const historyRes = await fetch('/api/history?limit=48', { cache: 'no-store' });
+          history = await historyRes.json();
+        } catch (e) {
+          history = { ok: false, items: [] };
+        }
 
         if (!data || data.ok === false) {
           document.getElementById('updated').textContent = '暂无状态数据';
@@ -347,16 +356,7 @@ function handlePage(request, env) {
 }
 
 async function saveHistory(env, payload) {
-  await env.DB.exec(`
-    CREATE TABLE IF NOT EXISTS status_history (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ts TEXT NOT NULL,
-      cpu_percent REAL,
-      memory_percent REAL,
-      disk_percent REAL,
-      docker_running INTEGER
-    );
-  `);
+  await ensureHistoryTable(env);
   await env.DB.prepare(
     "INSERT INTO status_history (ts, cpu_percent, memory_percent, disk_percent, docker_running) VALUES (?, ?, ?, ?, ?)"
   ).bind(
@@ -370,6 +370,19 @@ async function saveHistory(env, payload) {
     DELETE FROM status_history
     WHERE id NOT IN (
       SELECT id FROM status_history ORDER BY ts DESC LIMIT 500
+    );
+  `);
+}
+
+async function ensureHistoryTable(env) {
+  await env.DB.exec(`
+    CREATE TABLE IF NOT EXISTS status_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts TEXT NOT NULL,
+      cpu_percent REAL,
+      memory_percent REAL,
+      disk_percent REAL,
+      docker_running INTEGER
     );
   `);
 }
