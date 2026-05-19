@@ -1,8 +1,9 @@
 FROM python:3.12-alpine
 
-RUN apk add --no-cache docker-cli
+RUN apk add --no-cache docker-cli iputils curl
 
 WORKDIR /app
 COPY agent.py /app/agent.py
+COPY config.example.json /app/config.json
 
-CMD ["sh", "-c", "while true; do python /app/agent.py; sleep 60; done"]
+CMD ["python", "/app/agent.py"]
