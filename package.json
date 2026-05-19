@@ -1,0 +1,8 @@
+{
+  "name": "nas-status-page",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check worker.js"
+  }
+}

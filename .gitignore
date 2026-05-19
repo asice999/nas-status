@@ -1,0 +1,5 @@
+# Ignore local secrets
+.env
+.wrangler/
+node_modules/
+*.log

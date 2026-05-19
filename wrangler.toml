@@ -1,0 +1,16 @@
+name = "nas-status-page"
+main = "worker.js"
+compatibility_date = "2026-05-19"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "NAS_STATUS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nas_status_db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[observability.logs]
+enabled = true

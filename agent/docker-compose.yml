@@ -1,0 +1,16 @@
+services:
+  nas-status-agent:
+    build: .
+    container_name: nas-status-agent
+    restart: unless-stopped
+    environment:
+      REPORT_URL: "${REPORT_URL}"
+      REPORT_TOKEN: "${REPORT_TOKEN}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+
+networks:
+  default:
+    name: nas-status-agent-net
