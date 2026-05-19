@@ -1,0 +1,9 @@
+services:
+  nas-status-agent:
+    image: ghcr.io/asice999/nas-status-agent:latest
+    container_name: nas-status-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
